@@ -1,0 +1,39 @@
+name: Semgrep
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request: {}
+  workflow_dispatch: {}   # lets you trigger manually from GitHub UI
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: semgrep-scan
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep   # official Docker image, no install needed
+
+    if: github.actor != 'dependabot[bot]'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep scan
+        run: |
+          semgrep scan \
+            --config p/python \
+            --config p/security-audit \
+            --config p/owasp-top-ten \
+            --json \
+            --output semgrep_report.json \
+            ./code_samples/
+        continue-on-error: true
+
+      - name: Upload JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep_report.json
