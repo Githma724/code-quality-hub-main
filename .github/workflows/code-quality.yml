@@ -1,0 +1,63 @@
+name: Code Quality Scan
+on:
+  repository_dispatch:
+    types: [code_quality_scan]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write snippets to disk
+        run: |
+          mkdir -p submissions
+          echo '${{ toJson(github.event.client_payload.snippets) }}' > snippets.json
+          python3 - <<'PY'
+          import json, os, pathlib
+          data = json.load(open('snippets.json'))
+          for s in data:
+              ext = {'python':'py','javascript':'js','typescript':'ts','java':'java','go':'go','ruby':'rb'}.get(s.get('language','python'),'txt')
+              p = pathlib.Path('submissions')/f"{s['name']}.{ext}"
+              p.write_text(s['code'])
+          PY
+
+      - name: Run Semgrep
+        run: |
+          pip install semgrep
+          semgrep scan --config auto --json submissions/ > semgrep.json || true
+
+      - name: Aggregate results
+        run: |
+          python3 - <<'PY'
+          import json, collections, pathlib
+          sem = json.load(open('semgrep.json'))
+          out = collections.defaultdict(lambda: {'vulnerabilities':0,'warnings':0,'errors':0,'info':0,'findings':[],'linesOfCode':0})
+          for f in pathlib.Path('submissions').iterdir():
+              name = f.stem
+              out[name]['linesOfCode'] = sum(1 for _ in open(f))
+          for r in sem.get('results', []):
+              name = pathlib.Path(r['path']).stem
+              sev = r.get('extra',{}).get('severity','INFO').lower()
+              if sev in ('error','high','critical'):
+                  out[name]['vulnerabilities'] += 1
+                  out[name]['errors'] += 1
+              elif sev in ('warning','medium'):
+                  out[name]['warnings'] += 1
+              else:
+                  out[name]['info'] += 1
+              out[name]['findings'].append({
+                  'severity': sev,
+                  'message': r.get('extra',{}).get('message',''),
+                  'line': r.get('start',{}).get('line'),
+                  'rule': r.get('check_id',''),
+              })
+          # TODO: merge SonarCloud metrics here (bugs, codeSmells, complexity, coverage, duplicatedLines)
+          json.dump(out, open('results.json','w'))
+          PY
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-results
+          path: results.json
