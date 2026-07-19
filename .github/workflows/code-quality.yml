@@ -1,7 +1,13 @@
 name: Code Quality Scan
+
+run-name: "Code Quality Scan (${{ github.event.client_payload.dispatch_id }})"
+
 on:
   repository_dispatch:
     types: [code_quality_scan]
+
+permissions:
+  contents: write
 
 jobs:
   scan:
@@ -12,52 +18,88 @@ jobs:
       - name: Write snippets to disk
         run: |
           mkdir -p submissions
-          echo '${{ toJson(github.event.client_payload.snippets) }}' > snippets.json
+          cat <<'EOF' > snippets.json
+          ${{ toJson(github.event.client_payload.snippets) }}
+          EOF
           python3 - <<'PY'
-          import json, os, pathlib
+          import json, pathlib
+
           data = json.load(open('snippets.json'))
+          ext_map = {
+              'python': 'py', 'javascript': 'js', 'typescript': 'ts',
+              'java': 'java', 'go': 'go', 'ruby': 'rb', 'c': 'c', 'cpp': 'cpp',
+          }
           for s in data:
-              ext = {'python':'py','javascript':'js','typescript':'ts','java':'java','go':'go','ruby':'rb'}.get(s.get('language','python'),'txt')
-              p = pathlib.Path('submissions')/f"{s['name']}.{ext}"
-              p.write_text(s['code'])
+              ext = ext_map.get(s.get('language', 'python'), 'txt')
+              path = pathlib.Path('submissions') / f"{s['name']}.{ext}"
+              path.write_text(s['code'])
           PY
 
       - name: Run Semgrep
         run: |
           pip install semgrep
-          semgrep scan --config auto --json submissions/ > semgrep.json || true
+          semgrep scan \
+            --config auto \
+            --config p/security-audit \
+            --config p/owasp-top-ten \
+            --json \
+            --output semgrep.json \
+            submissions/ || true
 
       - name: Aggregate results
         run: |
           python3 - <<'PY'
-          import json, collections, pathlib
+          import json, pathlib
+
           sem = json.load(open('semgrep.json'))
-          out = collections.defaultdict(lambda: {'vulnerabilities':0,'warnings':0,'errors':0,'info':0,'findings':[],'linesOfCode':0})
-          for f in pathlib.Path('submissions').iterdir():
+
+          out = {}
+          for f in sorted(pathlib.Path('submissions').iterdir()):
               name = f.stem
-              out[name]['linesOfCode'] = sum(1 for _ in open(f))
+              out[name] = {
+                  'linesOfCode': sum(1 for _ in open(f)),
+                  'critical': 0,
+                  'error': 0,
+                  'warning': 0,
+                  'info': 0,
+                  'totalFindings': 0,
+                  'findings': [],
+              }
+
+          severity_key = {'ERROR': 'error', 'WARNING': 'warning', 'INFO': 'info'}
+
           for r in sem.get('results', []):
               name = pathlib.Path(r['path']).stem
-              sev = r.get('extra',{}).get('severity','INFO').lower()
-              if sev in ('error','high','critical'):
-                  out[name]['vulnerabilities'] += 1
-                  out[name]['errors'] += 1
-              elif sev in ('warning','medium'):
-                  out[name]['warnings'] += 1
-              else:
-                  out[name]['info'] += 1
+              if name not in out:
+                  continue
+              sev = (r.get('extra', {}).get('severity') or 'INFO').upper()
+              key = severity_key.get(sev, 'info')
+              out[name][key] += 1
+              out[name]['totalFindings'] += 1
               out[name]['findings'].append({
                   'severity': sev,
-                  'message': r.get('extra',{}).get('message',''),
-                  'line': r.get('start',{}).get('line'),
-                  'rule': r.get('check_id',''),
+                  'message': r.get('extra', {}).get('message', ''),
+                  'line': r.get('start', {}).get('line'),
+                  'rule': r.get('check_id', ''),
               })
-          # TODO: merge SonarCloud metrics here (bugs, codeSmells, complexity, coverage, duplicatedLines)
-          json.dump(out, open('results.json','w'))
+
+          json.dump(out, open('results.json', 'w'), indent=2)
           PY
 
-      - name: Upload results
-        uses: actions/upload-artifact@v4
+      - name: Publish results to the repo
+        uses: actions/github-script@v7
         with:
-          name: scan-results
-          path: results.json
+          script: |
+            const fs = require('fs');
+            const content = fs.readFileSync('results.json', 'utf8');
+            const dispatchId = context.payload.client_payload.dispatch_id;
+            const path = `results/${dispatchId}.json`;
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              message: `Scan results for ${dispatchId}`,
+              content: Buffer.from(content, 'utf8').toString('base64'),
+              branch: 'main',
+            });
