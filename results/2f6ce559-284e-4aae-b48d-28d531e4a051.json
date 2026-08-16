@@ -1,0 +1,33 @@
+{
+  "Claude": {
+    "linesOfCode": 32,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  },
+  "GPT-4": {
+    "linesOfCode": 51,
+    "critical": 0,
+    "error": 2,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 2,
+    "findings": [
+      {
+        "severity": "ERROR",
+        "message": "bcrypt hash detected",
+        "line": 7,
+        "rule": "generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash"
+      },
+      {
+        "severity": "ERROR",
+        "message": "bcrypt hash detected",
+        "line": 12,
+        "rule": "generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash"
+      }
+    ]
+  }
+}

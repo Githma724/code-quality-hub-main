@@ -1,0 +1,46 @@
+{
+  "Claude": {
+    "linesOfCode": 15,
+    "critical": 0,
+    "error": 0,
+    "warning": 2,
+    "info": 0,
+    "totalFindings": 2,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format.",
+        "line": 6,
+        "rule": "python.lang.security.deserialization.pickle.avoid-pickle"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+        "line": 10,
+        "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected"
+      }
+    ]
+  },
+  "GPT-4": {
+    "linesOfCode": 13,
+    "critical": 0,
+    "error": 1,
+    "warning": 1,
+    "info": 0,
+    "totalFindings": 2,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Detected possible formatted SQL query. Use parameterized queries instead.",
+        "line": 9,
+        "rule": "python.lang.security.audit.formatted-sql-query.formatted-sql-query"
+      },
+      {
+        "severity": "ERROR",
+        "message": "Avoiding SQL string concatenation: untrusted input concatenated with raw SQL query can result in SQL Injection. In order to execute raw query safely, prepared statement should be used. SQLAlchemy provides TextualSQL to easily used prepared statement with named parameters. For complex SQL composition, use SQL Expression Language or Schema Definition Language. In most cases, SQLAlchemy ORM will be a better option.",
+        "line": 9,
+        "rule": "python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query"
+      }
+    ]
+  }
+}
