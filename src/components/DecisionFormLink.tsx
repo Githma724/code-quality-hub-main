@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
 
 // Paste your Google Form's public link here.
-const GOOGLE_FORM_URL = "https://forms.gle/REPLACE_ME";
+const GOOGLE_FORM_URL = "https://forms.gle/nivyj6h5gkajLWCY9";
 
 interface Props {
   chosenLabel: string;

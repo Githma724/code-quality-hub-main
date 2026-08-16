@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { CodeInputPanel, type CodeSample } from "@/components/CodeInputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { DecisionFormLink } from "@/components/DecisionFormLink";
 import { GithubTokenInput, getStoredToken } from "@/components/GithubTokenInput";
 import { usePipeline } from "@/hooks/usePipeline";
-import { GitCompareArrows } from "lucide-react";
+import { BarChart3, GitCompareArrows } from "lucide-react";
 
 export default function Index() {
   const [token, setToken] = useState(getStoredToken());
@@ -35,12 +36,18 @@ export default function Index() {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <GitCompareArrows className="h-5 w-5 text-primary-foreground" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold text-foreground">LLM Code Analyzer</h1>
             <p className="text-sm text-muted-foreground">
               Paste LLM outputs · Run Semgrep via GitHub Actions · Log your final call
             </p>
           </div>
+          <Link
+            to="/stats"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <BarChart3 className="h-4 w-4" /> Selection Stats
+          </Link>
         </div>
       </header>
 
