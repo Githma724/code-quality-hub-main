@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFormStats, COL } from "@/hooks/useFormStats";
-import { RefreshCw, Users, Trophy, Gauge, Clock } from "lucide-react";
+import { RefreshCw, Users, Trophy, Gauge, Clock, ShieldAlert, PenLine } from "lucide-react";
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -110,6 +110,91 @@ export function FormStatsDashboard() {
               <CardContent>
                 <div className="text-sm font-medium text-foreground">
                   {stats.lastResponseAt ?? "—"}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* RQ2 summary cards: override + modification */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Recommendation override rate
+                </CardTitle>
+                <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">
+                  {100 - stats.overallOverrideRate}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  % of responses where the developer picked a different tool
+                  than the dashboard recommended
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Code modification rate
+                </CardTitle>
+                <PenLine className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">
+                  {stats.overallModificationRate}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  % of responses where the developer edited the code before accepting it
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Override + modification breakdowns */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Override rate by task type</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.overrideRateByTask.map((d) => ({
+                      task: d.group,
+                      overrideRate: Math.round((100 - d.rate) * 10) / 10,
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="task" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={50} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="overrideRate" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Modification rate by tool</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.modificationRateByTool.map((d) => ({
+                      tool: d.group,
+                      rate: d.rate,
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="tool" tick={{ fontSize: 11 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="rate" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
@@ -211,11 +296,31 @@ export function FormStatsDashboard() {
             </Card>
           </div>
 
+          {/* Main reason for selection (checkbox, multi-value) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Main reason for selection</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.countsByMainReason} layout="vertical" margin={{ left: 24 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <YAxis dataKey="label" type="category" width={140} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Demographics: task, language, experience, prior AI use */}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Coding tasks completed</CardTitle>
+                <CardTitle className="text-base">Coding tasks reviewed</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-56">
@@ -351,6 +456,8 @@ export function FormStatsDashboard() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Task: {r[COL.task] ?? "—"} · Confidence: {r[COL.confidence] ?? "—"}/5
+                      {" · "}Recommended tool chosen: {r[COL.override] ?? "—"}
+                      {" · "}Modified: {r[COL.modified] ?? "—"}
                     </p>
                     {r[COL.reason] && (
                       <p className="text-xs text-foreground/80 mt-1">

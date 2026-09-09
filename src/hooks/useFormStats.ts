@@ -1,10 +1,4 @@
-// src/hooks/useFormStats.ts
-//
-// Fetches the Google Sheet (linked to your Form's responses), published to
-// the web as CSV, and turns it into stats/analysis for the dashboard.
-//
-// SETUP: File > Share > Publish to web > pick "Form Responses 1" > CSV > Publish.
-// Paste that URL into SHEET_CSV_URL below.
+
 
 import { useCallback, useEffect, useState } from "react";
 import { parseCsv } from "@/lib/csv";
@@ -12,18 +6,20 @@ import { parseCsv } from "@/lib/csv";
 const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQkDjn4O4oamE14JaVYRi9keo0wO7VTkvgOihsOuGwQZI8Dm4CCnnyR4E3PmEC3ww4pBUBA6MmjefpR/pub?output=csv";
 
-// --- Column names (normalized: trimmed, collapsed whitespace) ---
 const COL = {
   timestamp: "Timestamp",
-  developer: "Developer Name",
+  participantId: "Participants Name",
   experience: "Years of Software Development Experience",
   language: "Primary Programming Language",
   priorAiUse: "Have you previously used AI coding assistants?",
-  task: "Which coding task did you complete?",
-  tool: "Which AI tool did you choose?",
+  task: "Which coding task did you review?",
+  tool: "Which AI tools did you choose?",
+  mainReason: "Main reason for selection.",
   reason: "Why did you choose this output over the others?",
   tradeoffs: "What tradeoffs or weaknesses did you accept?",
   confidence: "How confident are you this is genuinely the best output?",
+  override: "Did you choose the AI tool dashboard recommendation as the safest tool?",
+  modified: "Did you modify the code before accepting it?",
 } as const;
 
 function normalizeKey(key: string): string {
@@ -61,6 +57,67 @@ function countBy(rows: Record<string, string>[], col: string): CountEntry[] {
     .sort((a, b) => b.count - a.count);
 }
 
+
+function countByMulti(rows: Record<string, string>[], col: string): CountEntry[] {
+  const counts = new Map<string, number>();
+  let totalSelections = 0;
+  for (const row of rows) {
+    const val = row[col];
+    if (!val) continue;
+    const parts = val.split(",").map((p) => p.trim()).filter(Boolean);
+    for (const p of parts) {
+      counts.set(p, (counts.get(p) ?? 0) + 1);
+      totalSelections++;
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({
+      label,
+      count,
+      percent: totalSelections > 0 ? Math.round((count / totalSelections) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+
+function rateOf(
+  rows: Record<string, string>[],
+  col: string,
+  positiveValue = "Yes"
+): { rate: number; yes: number; total: number } {
+  let yes = 0;
+  let total = 0;
+  for (const row of rows) {
+    const val = row[col];
+    if (!val) continue;
+    total++;
+    if (val === positiveValue) yes++;
+  }
+  return { rate: total > 0 ? Math.round((yes / total) * 1000) / 10 : 0, yes, total };
+}
+
+
+function rateByGroup(
+  rows: Record<string, string>[],
+  groupCol: string,
+  rateCol: string,
+  positiveValue = "Yes"
+): { group: string; rate: number; total: number }[] {
+  const groups = new Map<string, Record<string, string>[]>();
+  for (const row of rows) {
+    const g = row[groupCol];
+    if (!g) continue;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g)!.push(row);
+  }
+  return Array.from(groups.entries())
+    .map(([group, groupRows]) => {
+      const { rate, total } = rateOf(groupRows, rateCol, positiveValue);
+      return { group, rate, total };
+    })
+    .sort((a, b) => b.rate - a.rate);
+}
+
 export interface FormStats {
   totalResponses: number;
 
@@ -74,9 +131,18 @@ export interface FormStats {
   countsByTask: CountEntry[];
   countsByPriorAiUse: CountEntry[];
 
+  // Reasoning
+  countsByMainReason: CountEntry[];
+
   // Confidence
   overallAvgConfidence: number;
   confidenceDistribution: { score: number; count: number }[];
+
+  // Override / modification (RQ2)
+  overallOverrideRate: number;       // % who chose the recommended tool
+  overrideRateByTask: { group: string; rate: number; total: number }[];
+  overallModificationRate: number;   // % who modified the code before accepting
+  modificationRateByTool: { group: string; rate: number; total: number }[];
 
   // Time
   byDate: { date: string; count: number }[];
@@ -143,6 +209,9 @@ export function useFormStats() {
       const countsByTask = countBy(rows, COL.task);
       const countsByPriorAiUse = countBy(rows, COL.priorAiUse);
 
+      // --- Reasoning (checkbox, multi-value) ---
+      const countsByMainReason = countByMulti(rows, COL.mainReason);
+
       // --- Confidence distribution (1-5) ---
       const allConfidence = rows
         .map((r) => Number(r[COL.confidence]))
@@ -150,8 +219,8 @@ export function useFormStats() {
       const overallAvgConfidence =
         allConfidence.length > 0
           ? Math.round(
-              (allConfidence.reduce((a, b) => a + b, 0) / allConfidence.length) * 100
-            ) / 100
+            (allConfidence.reduce((a, b) => a + b, 0) / allConfidence.length) * 100
+          ) / 100
           : 0;
 
       const distMap = new Map<number, number>();
@@ -163,6 +232,12 @@ export function useFormStats() {
         score,
         count: distMap.get(score) ?? 0,
       }));
+
+      // --- Override / modification (RQ2) ---
+      const overallOverrideRate = rateOf(rows, COL.override, "Yes").rate;
+      const overrideRateByTask = rateByGroup(rows, COL.task, COL.override, "Yes");
+      const overallModificationRate = rateOf(rows, COL.modified, "Yes").rate;
+      const modificationRateByTool = rateByGroup(rows, COL.tool, COL.modified, "Yes");
 
       // --- Responses over time ---
       const dateCounts = new Map<string, number>();
@@ -183,13 +258,13 @@ export function useFormStats() {
       const spanDays =
         byDate.length > 0
           ? Math.max(
-              1,
-              Math.round(
-                (new Date(byDate[byDate.length - 1].date).getTime() -
-                  new Date(byDate[0].date).getTime()) /
-                  (1000 * 60 * 60 * 24)
-              ) + 1
-            )
+            1,
+            Math.round(
+              (new Date(byDate[byDate.length - 1].date).getTime() -
+                new Date(byDate[0].date).getTime()) /
+              (1000 * 60 * 60 * 24)
+            ) + 1
+          )
           : 1;
 
       setStats({
@@ -200,8 +275,13 @@ export function useFormStats() {
         countsByLanguage,
         countsByTask,
         countsByPriorAiUse,
+        countsByMainReason,
         overallAvgConfidence,
         confidenceDistribution,
+        overallOverrideRate,
+        overrideRateByTask,
+        overallModificationRate,
+        modificationRateByTool,
         byDate,
         responseRatePerDay: Math.round((total / spanDays) * 10) / 10,
         lastResponseAt: latestDate ? latestDate.toLocaleString() : null,
