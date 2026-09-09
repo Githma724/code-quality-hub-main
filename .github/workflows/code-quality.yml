@@ -42,6 +42,8 @@ jobs:
             --config auto \
             --config p/security-audit \
             --config p/owasp-top-ten \
+            --config p/javascript \
+            --config .github/workflows/semgrep/quality-rules.yml \
             --json \
             --output semgrep.json \
             submissions/ || true
