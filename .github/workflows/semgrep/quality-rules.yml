@@ -1,0 +1,36 @@
+rules:
+  - id: leftover-console-log
+    pattern-either:
+      - pattern: console.log(...)
+      - pattern: console.debug(...)
+      - pattern: console.info(...)
+    message: "Leftover console statement — remove or replace with a proper logger before production."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: best-practice
+
+  - id: leftover-print-statement
+    pattern: print(...)
+    message: "Leftover print() statement — remove or replace with logging before production."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: best-practice
+
+  - id: regex-based-html-sanitization
+    pattern-regex: '\.replace\(\s*/<[^>]*>/'
+    message: "Manual regex-based tag stripping detected — fragile against malformed/nested markup; prefer a vetted library (e.g. DOMPurify, bleach)."
+    languages: [javascript, typescript, python]
+    severity: WARNING
+    metadata:
+      category: security
+
+  - id: empty-catch-block
+    pattern: |
+      try { ... } catch ($ERR) { }
+    message: "Empty catch block — errors are being silently swallowed."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: best-practice
