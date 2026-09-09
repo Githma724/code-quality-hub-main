@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Zap } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 export interface CodeSample {
   id: string;
   label: string;
   code: string;
+  language: string;
 }
 
 interface Props {
@@ -21,10 +23,17 @@ interface Props {
 }
 
 export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzing, onRunSonar, isSonarRunning }: Props) {
+  const LANGUAGES = [
+    { value: "python", label: "Python", ext: "py" },
+    { value: "javascript", label: "JavaScript", ext: "js" },
+    { value: "typescript", label: "TypeScript", ext: "ts" },
+    { value: "java", label: "Java", ext: "java" },
+  ] as const;
+
   const addSample = () => {
     onSamplesChange([
       ...samples,
-      { id: crypto.randomUUID(), label: `LLM ${samples.length + 1}`, code: "" },
+      { id: crypto.randomUUID(), label: `LLM ${samples.length + 1}`, code: "", language: "javascript" },
     ]);
   };
 
@@ -33,7 +42,7 @@ export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzin
     onSamplesChange(samples.filter(s => s.id !== id));
   };
 
-  const update = (id: string, field: "label" | "code", value: string) => {
+  const update = (id: string, field: "label" | "code" | "language", value: string) => {
     onSamplesChange(samples.map(s => (s.id === id ? { ...s, [field]: value } : s)));
   };
 
@@ -64,7 +73,9 @@ export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzin
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
+
               </div>
+
             </CardHeader>
             <CardContent>
               <Textarea
@@ -77,6 +88,12 @@ export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzin
               <p className="mt-1 text-xs text-muted-foreground">
                 {sample.code.split("\n").length} lines
               </p>
+              <Select value={sample.language} onValueChange={(v) => update(sample.id, "language", v)}>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Language" /></SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
         ))}

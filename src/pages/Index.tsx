@@ -10,9 +10,9 @@ import { BarChart3, GitCompareArrows } from "lucide-react";
 export default function Index() {
   const [token, setToken] = useState(getStoredToken());
   const [samples, setSamples] = useState<CodeSample[]>([
-    { id: crypto.randomUUID(), label: "GPT-4", code: "" },
-    { id: crypto.randomUUID(), label: "Claude", code: "" },
-    { id: crypto.randomUUID(), label: "Gemini", code: "" },
+    { id: crypto.randomUUID(), label: "GPT-4", code: "", language: "javascript" },
+    { id: crypto.randomUUID(), label: "Claude", code: "", language: "javascript" },
+    { id: crypto.randomUUID(), label: "Gemini", code: "", language: "javascript" },
   ]);
   const [chosenLabel, setChosenLabel] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function Index() {
     runPipeline(
       samples
         .filter((s) => s.code.trim())
-        .map((s) => ({ label: s.label, code: s.code })),
+        .map((s) => ({ label: s.label, code: s.code, language: s.language })),
     );
   };
 
@@ -75,6 +75,7 @@ export default function Index() {
         {results && (
           <ResultsDashboard
             results={results}
+            samples={samples.filter((s) => s.code.trim())}
             chosenLabel={chosenLabel}
             onChoose={setChosenLabel}
           />
