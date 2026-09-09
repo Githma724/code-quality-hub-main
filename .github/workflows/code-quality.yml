@@ -43,7 +43,7 @@ jobs:
             --config p/security-audit \
             --config p/owasp-top-ten \
             --config p/javascript \
-            --config .semgrep/quality-rules.yml \
+            --config .github/workflows/semgrep/quality-rules.yml \
             --json \
             --output semgrep.json \
             submissions/ || true
