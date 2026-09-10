@@ -1,0 +1,27 @@
+{
+  "Claude": {
+    "linesOfCode": 28,
+    "critical": 0,
+    "error": 0,
+    "warning": 1,
+    "info": 0,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking.",
+        "line": 11,
+        "rule": "javascript:S8786"
+      }
+    ]
+  },
+  "GPT-4": {
+    "linesOfCode": 17,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  }
+}
