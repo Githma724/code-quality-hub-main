@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Zap } from "lucide-react";
+import { Plus, Trash2, Zap, CheckCircle2, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 export interface CodeSample {
@@ -16,13 +15,12 @@ export interface CodeSample {
 interface Props {
   samples: CodeSample[];
   onSamplesChange: (s: CodeSample[]) => void;
-  onAnalyze: () => void;
+  onRunBoth: () => void;
   isAnalyzing: boolean;
-  onRunSonar?: () => void;
-  isSonarRunning?: boolean;
+  isSonarRunning: boolean;
 }
 
-export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzing, onRunSonar, isSonarRunning }: Props) {
+export function CodeInputPanel({ samples, onSamplesChange, onRunBoth, isAnalyzing, isSonarRunning }: Props) {
   const LANGUAGES = [
     { value: "python", label: "Python", ext: "py" },
     { value: "javascript", label: "JavaScript", ext: "js" },
@@ -47,6 +45,7 @@ export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzin
   };
 
   const hasCode = samples.some(s => s.code.trim().length > 0);
+  const isRunning = isAnalyzing || isSonarRunning;
 
   return (
     <div className="space-y-4">
@@ -73,9 +72,7 @@ export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzin
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
-
               </div>
-
             </CardHeader>
             <CardContent>
               <Textarea
@@ -99,17 +96,21 @@ export function CodeInputPanel({ samples, onSamplesChange, onAnalyze, isAnalyzin
         ))}
       </div>
 
-      <div className="grid gap-2 md:grid-cols-2">
-        <Button onClick={onAnalyze} disabled={!hasCode || isAnalyzing} size="lg">
-          <Zap className="mr-2 h-5 w-5" />
-          {isAnalyzing ? "Analyzing…" : "Run Local Analysis"}
-        </Button>
-        {onRunSonar && (
-          <Button onClick={onRunSonar} disabled={!hasCode || isSonarRunning} size="lg" variant="secondary">
-            {isSonarRunning ? "Scanning on SonarCloud…" : "Run on SonarCloud"}
-          </Button>
+      <Button onClick={onRunBoth} disabled={!hasCode || isRunning} size="lg" className="w-full">
+        <Zap className="mr-2 h-5 w-5" />
+        {!isRunning ? "Run Analysis (Semgrep + SonarCloud)" : (
+          <span className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              {isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              Semgrep
+            </span>
+            <span className="flex items-center gap-1.5">
+              {isSonarRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              SonarCloud
+            </span>
+          </span>
         )}
-      </div>
+      </Button>
     </div>
   );
 }

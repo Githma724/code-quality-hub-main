@@ -16,7 +16,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFormStats, COL } from "@/hooks/useFormStats";
-import { RefreshCw, Users, Trophy, Gauge, Clock, ShieldAlert, PenLine } from "lucide-react";
+import {
+  RefreshCw,
+  Users,
+  Trophy,
+  Gauge,
+  Clock,
+  PenLine,
+  Split,
+  ShieldQuestion,
+  Timer,
+} from "lucide-react";
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -70,17 +80,18 @@ export function FormStatsDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Most chosen tool
+                  Most chosen output
                 </CardTitle>
                 <Trophy className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-foreground">
-                  {stats.countsByTool[0]?.label ?? "—"}
+                  {stats.countsByChosenOutput[0]?.label ?? "—"}
                 </div>
-                {stats.countsByTool[0] && (
+                {stats.countsByChosenOutput[0] && (
                   <p className="text-xs text-muted-foreground">
-                    {stats.countsByTool[0].count} selections ({stats.countsByTool[0].percent}%)
+                    {stats.countsByChosenOutput[0].count} selections (
+                    {stats.countsByChosenOutput[0].percent}%)
                   </p>
                 )}
               </CardContent>
@@ -115,22 +126,43 @@ export function FormStatsDashboard() {
             </Card>
           </div>
 
-          {/* RQ2 summary cards: override + modification */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Core oversight/calibration metrics (RQ-B / RQ-C) */}
+          <div className="grid gap-4 sm:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Recommendation override rate
+                  Calibration shift rate
                 </CardTitle>
-                <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                <Split className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-foreground">
-                  {100 - stats.overallOverrideRate}%
+                  {stats.calibrationShiftRate}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  % of responses where the developer picked a different tool
-                  than the dashboard recommended
+                  % of responses where the final choice differed from the
+                  developer's pre-scan expectation — evidence the scan
+                  results are actually changing minds, not just confirming
+                  priors
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Own-judgment rate on disagreement
+                </CardTitle>
+                <ShieldQuestion className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">
+                  {stats.ownJudgmentRateWhenDisagreed}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Of sessions where Semgrep and SonarCloud disagreed, % where
+                  the developer trusted neither tool and used their own
+                  judgment instead
                 </p>
               </CardContent>
             </Card>
@@ -147,30 +179,96 @@ export function FormStatsDashboard() {
                   {stats.overallModificationRate}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  % of responses where the developer edited the code before accepting it
+                  % of responses where the developer edited the code before
+                  accepting it
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Override + modification breakdowns */}
+          {/* Tool agreement + weighted tool breakdown */}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Override rate by task type</CardTitle>
+                <CardTitle className="text-base">
+                  Semgrep vs SonarCloud agreement
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.overrideRateByTask.map((d) => ({
-                      task: d.group,
-                      overrideRate: Math.round((100 - d.rate) * 10) / 10,
-                    }))}>
+                    <PieChart>
+                      <Pie
+                        data={stats.toolAgreementCounts}
+                        dataKey="count"
+                        nameKey="label"
+                        outerRadius={80}
+                        label={(p: any) => `${p.label} (${p.percent}%)`}
+                      >
+                        {stats.toolAgreementCounts.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Which assessment did developers weight?
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={stats.weightedToolCounts}
+                      layout="vertical"
+                      margin={{ left: 24 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="task" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={50} />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <YAxis
+                        dataKey="label"
+                        type="category"
+                        width={140}
+                        tick={{ fontSize: 11 }}
+                      />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Calibration by experience + modification by chosen output */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Calibration shift rate by experience
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={stats.calibrationShiftByExperience.map((d) => ({
+                        group: d.group,
+                        rate: d.rate,
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="group" tick={{ fontSize: 11 }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                       <Tooltip />
-                      <Bar dataKey="overrideRate" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="rate" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -179,15 +277,19 @@ export function FormStatsDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Modification rate by tool</CardTitle>
+                <CardTitle className="text-base">
+                  Modification rate by chosen output
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.modificationRateByTool.map((d) => ({
-                      tool: d.group,
-                      rate: d.rate,
-                    }))}>
+                    <BarChart
+                      data={stats.modificationRateByChosenOutput.map((d) => ({
+                        tool: d.group,
+                        rate: d.rate,
+                      }))}
+                    >
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                       <XAxis dataKey="tool" tick={{ fontSize: 11 }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
@@ -200,16 +302,66 @@ export function FormStatsDashboard() {
             </Card>
           </div>
 
-          {/* Tool selection: bar + pie */}
+          {/* Time on task */}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Selections by AI tool</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Timer className="h-4 w-4" /> Time spent reviewing
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.countsByTool}>
+                    <BarChart data={stats.timeOnTaskDistribution}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Avg confidence by time spent
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={stats.avgConfidenceByTimeOnTask.map((d) => ({
+                        bucket: d.bucket,
+                        avgConfidence: d.avgConfidence,
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
+                      <YAxis domain={[0, 5]} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="avgConfidence" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Chosen output: bar + pie */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Selections by chosen output</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.countsByChosenOutput}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                       <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
@@ -230,14 +382,14 @@ export function FormStatsDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={stats.countsByTool}
+                        data={stats.countsByChosenOutput}
                         dataKey="count"
                         nameKey="label"
                         innerRadius={50}
                         outerRadius={80}
                         paddingAngle={2}
                       >
-                        {stats.countsByTool.map((_, i) => (
+                        {stats.countsByChosenOutput.map((_, i) => (
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
@@ -259,12 +411,16 @@ export function FormStatsDashboard() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Avg confidence by tool</CardTitle>
+                <CardTitle className="text-base">Avg confidence by chosen output</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.avgConfidenceByTool} layout="vertical" margin={{ left: 16 }}>
+                    <BarChart
+                      data={stats.avgConfidenceByChosenOutput}
+                      layout="vertical"
+                      margin={{ left: 16 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                       <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 12 }} />
                       <YAxis dataKey="tool" type="category" width={90} tick={{ fontSize: 12 }} />
@@ -299,7 +455,7 @@ export function FormStatsDashboard() {
           {/* Main reason for selection (checkbox, multi-value) */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Main reason for selection</CardTitle>
+              <CardTitle className="text-base">Main reason(s) for selection</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-64">
@@ -310,6 +466,26 @@ export function FormStatsDashboard() {
                     <YAxis dataKey="label" type="category" width={140} tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* What was compared */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Tools compared per session</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.countsByToolsCompared}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -327,7 +503,14 @@ export function FormStatsDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats.countsByTask}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={50} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 10 }}
+                        interval={0}
+                        angle={-15}
+                        textAnchor="end"
+                        height={50}
+                      />
                       <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                       <Tooltip />
                       <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -448,7 +631,7 @@ export function FormStatsDashboard() {
                   <div key={i} className="border-b border-border pb-3 text-sm last:border-0">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-foreground">
-                        {r[COL.tool] ?? "—"}
+                        {r[COL.chosenOutput] ?? "—"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {r[COL.timestamp] ?? ""}
@@ -456,9 +639,14 @@ export function FormStatsDashboard() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Task: {r[COL.task] ?? "—"} · Confidence: {r[COL.confidence] ?? "—"}/5
-                      {" · "}Recommended tool chosen: {r[COL.override] ?? "—"}
+                      {" · "}Tools agreed: {r[COL.toolAgreement] ?? "—"}
                       {" · "}Modified: {r[COL.modified] ?? "—"}
                     </p>
+                    {r[COL.sessionId] && (
+                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                        Session: {r[COL.sessionId]}
+                      </p>
+                    )}
                     {r[COL.reason] && (
                       <p className="text-xs text-foreground/80 mt-1">
                         <span className="font-medium">Why: </span>

@@ -18,7 +18,7 @@ export interface SampleResult {
   findings: Finding[];
 }
 
-export type PipelineStatus = "idle" | "running" | "completed" | "failed";
+export type ToolStatus = "idle" | "running" | "completed" | "failed";
 
 export interface PipelineSample {
   label: string;
@@ -26,16 +26,26 @@ export interface PipelineSample {
   language?: string;
 }
 
+interface ToolState {
+  status: ToolStatus;
+  results: Record<string, SampleResult> | null;
+  error: string | null;
+}
+
 const POLL_INTERVAL_MS = 5000;
 const MAX_POLLS = 72; // ~6 minutes ceiling before giving up
 
+const idleTool: ToolState = { status: "idle", results: null, error: null };
+
 export function usePipeline(token: string) {
-  const [status, setStatus] = useState<PipelineStatus>("idle");
-  const [results, setResults] = useState<Record<string, SampleResult> | null>(null);
   const [dispatchId, setDispatchId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [semgrep, setSemgrep] = useState<ToolState>(idleTool);
+  const [sonar, setSonar] = useState<ToolState>(idleTool);
+
   const pollHandle = useRef<number | null>(null);
   const pollCount = useRef(0);
+  const semgrepDone = useRef(false);
+  const sonarDone = useRef(false);
 
   const stopPolling = useCallback(() => {
     if (pollHandle.current !== null) {
@@ -47,17 +57,19 @@ export function usePipeline(token: string) {
   const runPipeline = useCallback(
     async (samples: PipelineSample[]) => {
       stopPolling();
-      setError(null);
-      setResults(null);
       pollCount.current = 0;
+      semgrepDone.current = false;
+      sonarDone.current = false;
 
       if (!token) {
-        setStatus("failed");
-        setError("Paste your GitHub token above first.");
+        const failed: ToolState = { status: "failed", results: null, error: "Paste your GitHub token above first." };
+        setSemgrep(failed);
+        setSonar(failed);
         return;
       }
 
-      setStatus("running");
+      setSemgrep({ status: "running", results: null, error: null });
+      setSonar({ status: "running", results: null, error: null });
 
       const snippets: Snippet[] = samples.map((s) => ({
         name: s.label.replace(/[^a-zA-Z0-9_-]/g, "_") || "sample",
@@ -65,41 +77,65 @@ export function usePipeline(token: string) {
         language: s.language ?? "python",
       }));
 
-      let id: string;
-      try {
-        id = await dispatchScan(token, snippets);
-      } catch (e) {
-        setStatus("failed");
-        setError(String(e));
-        return;
-      }
-
+      const id = crypto.randomUUID(); // shared so both result files correlate to one run
       setDispatchId(id);
+
+      const [semgrepDispatch, sonarDispatch] = await Promise.allSettled([
+        dispatchScan(token, snippets, { dispatchId: id, eventType: "code_quality_scan" }),
+        dispatchScan(token, snippets, { dispatchId: id, eventType: "code_quality_sonar_scan" }),
+      ]);
+
+      if (semgrepDispatch.status === "rejected") {
+        semgrepDone.current = true;
+        setSemgrep({ status: "failed", results: null, error: String(semgrepDispatch.reason) });
+      }
+      if (sonarDispatch.status === "rejected") {
+        sonarDone.current = true;
+        setSonar({ status: "failed", results: null, error: String(sonarDispatch.reason) });
+      }
+      if (semgrepDone.current && sonarDone.current) return;
 
       pollHandle.current = window.setInterval(async () => {
         pollCount.current += 1;
 
-        try {
-          const data = await fetchResultsIfReady(token, id);
-
-          if (data) {
-            setResults(data as Record<string, SampleResult>);
-            setStatus("completed");
-            stopPolling();
-            return;
+        if (!semgrepDone.current) {
+          try {
+            const data = await fetchResultsIfReady(token, id, `results/${id}.json`);
+            if (data) {
+              setSemgrep({ status: "completed", results: data as Record<string, SampleResult>, error: null });
+              semgrepDone.current = true;
+            }
+          } catch (e) {
+            setSemgrep({ status: "failed", results: null, error: String(e) });
+            semgrepDone.current = true;
           }
-        } catch (e) {
-          setStatus("failed");
-          setError(String(e));
+        }
+
+        if (!sonarDone.current) {
+          try {
+            const data = await fetchResultsIfReady(token, id, `results/${id}-sonar.json`);
+            if (data) {
+              setSonar({ status: "completed", results: data as Record<string, SampleResult>, error: null });
+              sonarDone.current = true;
+            }
+          } catch (e) {
+            setSonar({ status: "failed", results: null, error: String(e) });
+            sonarDone.current = true;
+          }
+        }
+
+        if (semgrepDone.current && sonarDone.current) {
           stopPolling();
           return;
         }
 
         if (pollCount.current >= MAX_POLLS) {
-          setStatus("failed");
-          setError(
-            "Timed out waiting for the workflow to finish. Check the Actions tab on GitHub.",
-          );
+          if (!semgrepDone.current) {
+            setSemgrep({ status: "failed", results: null, error: "Timed out waiting for Semgrep. Check the Actions tab on GitHub." });
+          }
+          if (!sonarDone.current) {
+            setSonar({ status: "failed", results: null, error: "Timed out waiting for SonarCloud. Check the Actions tab on GitHub." });
+          }
           stopPolling();
         }
       }, POLL_INTERVAL_MS);
@@ -107,5 +143,5 @@ export function usePipeline(token: string) {
     [token, stopPolling],
   );
 
-  return { status, results, dispatchId, error, runPipeline };
+  return { dispatchId, semgrep, sonar, runPipeline };
 }

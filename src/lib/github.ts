@@ -1,15 +1,3 @@
-// src/lib/github.ts
-//
-// Talks to GitHub directly from the browser — no backend needed.
-// Two calls only:
-//   1. dispatchScan()          -> POST /dispatches (triggers the workflow)
-//   2. fetchResultsIfReady()   -> GET  /contents/results/{id}.json
-//
-// Why not download the GitHub Actions "artifact" the normal way? Because
-// that endpoint redirects to a signed blob-storage URL that doesn't send
-// CORS headers, so browsers refuse to read it. Instead, the workflow
-// commits results.json straight into the repo, and we just poll for that
-// file's existence via the Contents API (which does support CORS).
 
 export const GITHUB_OWNER = "Githma724";
 export const GITHUB_REPO = "code-quality-hub-main";
@@ -31,8 +19,10 @@ export interface Snippet {
 export async function dispatchScan(
   token: string,
   snippets: Snippet[],
+  options?: { dispatchId?: string; eventType?: string },
 ): Promise<string> {
-  const dispatchId = crypto.randomUUID();
+  const dispatchId = options?.dispatchId ?? crypto.randomUUID();
+  const eventType = options?.eventType ?? "code_quality_scan";
 
   const res = await fetch(
     `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/dispatches`,
@@ -40,7 +30,7 @@ export async function dispatchScan(
       method: "POST",
       headers: { ...ghHeaders(token), "Content-Type": "application/json" },
       body: JSON.stringify({
-        event_type: "code_quality_scan",
+        event_type: eventType,
         client_payload: { snippets, dispatch_id: dispatchId },
       }),
     },
@@ -58,8 +48,9 @@ export async function dispatchScan(
 export async function fetchResultsIfReady(
   token: string,
   dispatchId: string,
+  resultsPath?: string,
 ): Promise<unknown | null> {
-  const path = `results/${dispatchId}.json`;
+  const path = resultsPath ?? `results/${dispatchId}.json`;
 
   const res = await fetch(
     `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${RESULTS_BRANCH}`,

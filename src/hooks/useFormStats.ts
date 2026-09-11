@@ -1,25 +1,32 @@
-
-
 import { useCallback, useEffect, useState } from "react";
 import { parseCsv } from "@/lib/csv";
 
 const SHEET_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQkDjn4O4oamE14JaVYRi9keo0wO7VTkvgOihsOuGwQZI8Dm4CCnnyR4E3PmEC3ww4pBUBA6MmjefpR/pub?output=csv";
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vROUfyZdgaKVYhRdTNajvfyml5naikzVkiWfGRwMO33eDiXvVWtECA99k3g-BeRj4H8qacx56q5FMxP/pub?output=csv";
 
+// Column names must match the redesigned form's exact question text
+// (Google Forms uses the question text as the linked Sheet's header row).
 const COL = {
   timestamp: "Timestamp",
-  participantId: "Participants Name",
+  sessionId: "Session / Dispatch ID",
+  participantId: "Participant Name",
   experience: "Years of Software Development Experience",
   language: "Primary Programming Language",
   priorAiUse: "Have you previously used AI coding assistants?",
   task: "Which coding task did you review?",
-  tool: "Which AI tools did you choose?",
-  mainReason: "Main reason for selection.",
+  toolsCompared: "Which AI tools' outputs did you compare in this session?",
+  preScanExpectation:
+    "Before looking at the Semgrep/SonarCloud results, which output did you expect to be safest?",
+  timeOnTask: "How long did you spend reviewing the outputs and results before deciding?",
+  toolAgreement:
+    "Did Semgrep and SonarCloud flag the same output as having the fewest issues?",
+  weightedTool: "If they disagreed, which assessment did you weight more heavily?",
+  chosenOutput: "Which output did you choose?",
+  modified: "Did you modify the code before accepting it?",
+  mainReason: "Main reason for selection",
   reason: "Why did you choose this output over the others?",
   tradeoffs: "What tradeoffs or weaknesses did you accept?",
-  confidence: "How confident are you this is genuinely the best output?",
-  override: "Did you choose the AI tool dashboard recommendation as the safest tool?",
-  modified: "Did you modify the code before accepting it?",
+  confidence: "How confident are you that this is genuinely the best output?",
 } as const;
 
 function normalizeKey(key: string): string {
@@ -57,7 +64,6 @@ function countBy(rows: Record<string, string>[], col: string): CountEntry[] {
     .sort((a, b) => b.count - a.count);
 }
 
-
 function countByMulti(rows: Record<string, string>[], col: string): CountEntry[] {
   const counts = new Map<string, number>();
   let totalSelections = 0;
@@ -79,29 +85,23 @@ function countByMulti(rows: Record<string, string>[], col: string): CountEntry[]
     .sort((a, b) => b.count - a.count);
 }
 
-
 function rateOf(
   rows: Record<string, string>[],
-  col: string,
-  positiveValue = "Yes"
-): { rate: number; yes: number; total: number } {
-  let yes = 0;
+  predicate: (row: Record<string, string>) => boolean
+): { rate: number; positive: number; total: number } {
+  let positive = 0;
   let total = 0;
   for (const row of rows) {
-    const val = row[col];
-    if (!val) continue;
     total++;
-    if (val === positiveValue) yes++;
+    if (predicate(row)) positive++;
   }
-  return { rate: total > 0 ? Math.round((yes / total) * 1000) / 10 : 0, yes, total };
+  return { rate: total > 0 ? Math.round((positive / total) * 1000) / 10 : 0, positive, total };
 }
-
 
 function rateByGroup(
   rows: Record<string, string>[],
   groupCol: string,
-  rateCol: string,
-  positiveValue = "Yes"
+  predicate: (row: Record<string, string>) => boolean
 ): { group: string; rate: number; total: number }[] {
   const groups = new Map<string, Record<string, string>[]>();
   for (const row of rows) {
@@ -112,7 +112,7 @@ function rateByGroup(
   }
   return Array.from(groups.entries())
     .map(([group, groupRows]) => {
-      const { rate, total } = rateOf(groupRows, rateCol, positiveValue);
+      const { rate, total } = rateOf(groupRows, predicate);
       return { group, rate, total };
     })
     .sort((a, b) => b.rate - a.rate);
@@ -121,35 +121,40 @@ function rateByGroup(
 export interface FormStats {
   totalResponses: number;
 
-  // Tool selection
-  countsByTool: CountEntry[];
-  avgConfidenceByTool: { tool: string; avgConfidence: number; responses: number }[];
+  countsByChosenOutput: CountEntry[];
+  avgConfidenceByChosenOutput: { tool: string; avgConfidence: number; responses: number }[];
 
-  // Demographics / context
+  countsByToolsCompared: CountEntry[];
+
   countsByExperience: CountEntry[];
   countsByLanguage: CountEntry[];
   countsByTask: CountEntry[];
   countsByPriorAiUse: CountEntry[];
 
-  // Reasoning
   countsByMainReason: CountEntry[];
 
-  // Confidence
   overallAvgConfidence: number;
   confidenceDistribution: { score: number; count: number }[];
 
-  // Override / modification (RQ2)
-  overallOverrideRate: number;       // % who chose the recommended tool
-  overrideRateByTask: { group: string; rate: number; total: number }[];
-  overallModificationRate: number;   // % who modified the code before accepting
-  modificationRateByTool: { group: string; rate: number; total: number }[];
+  // Calibration (RQ-C): did final choice match pre-scan expectation?
+  calibrationShiftRate: number; // % where chosenOutput != preScanExpectation
+  calibrationShiftByExperience: { group: string; rate: number; total: number }[];
 
-  // Time
+  // Tool agreement + weighting (RQ-B)
+  toolAgreementCounts: CountEntry[]; // agreed / disagreed / only one tool
+  weightedToolCounts: CountEntry[]; // Semgrep / SonarCloud / own judgment / N/A
+  ownJudgmentRateWhenDisagreed: number;
+
+  timeOnTaskDistribution: CountEntry[];
+  avgConfidenceByTimeOnTask: { bucket: string; avgConfidence: number; responses: number }[];
+
+  overallModificationRate: number;
+  modificationRateByChosenOutput: { group: string; rate: number; total: number }[];
+
   byDate: { date: string; count: number }[];
   responseRatePerDay: number;
   lastResponseAt: string | null;
 
-  // Raw
   recent: Record<string, string>[];
   allRows: Record<string, string>[];
   columns: string[];
@@ -182,19 +187,17 @@ export function useFormStats() {
       const total = rows.length;
       const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
 
-      // --- Tool selection counts ---
-      const countsByTool = countBy(rows, COL.tool);
+      const countsByChosenOutput = countBy(rows, COL.chosenOutput);
 
-      // --- Avg confidence per tool ---
       const toolGroups = new Map<string, number[]>();
       for (const row of rows) {
-        const tool = row[COL.tool];
+        const tool = row[COL.chosenOutput];
         const conf = Number(row[COL.confidence]);
         if (!tool || isNaN(conf)) continue;
         if (!toolGroups.has(tool)) toolGroups.set(tool, []);
         toolGroups.get(tool)!.push(conf);
       }
-      const avgConfidenceByTool = Array.from(toolGroups.entries())
+      const avgConfidenceByChosenOutput = Array.from(toolGroups.entries())
         .map(([tool, scores]) => ({
           tool,
           avgConfidence:
@@ -203,24 +206,23 @@ export function useFormStats() {
         }))
         .sort((a, b) => b.avgConfidence - a.avgConfidence);
 
-      // --- Demographics ---
+      const countsByToolsCompared = countByMulti(rows, COL.toolsCompared);
+
       const countsByExperience = countBy(rows, COL.experience);
       const countsByLanguage = countBy(rows, COL.language);
       const countsByTask = countBy(rows, COL.task);
       const countsByPriorAiUse = countBy(rows, COL.priorAiUse);
 
-      // --- Reasoning (checkbox, multi-value) ---
       const countsByMainReason = countByMulti(rows, COL.mainReason);
 
-      // --- Confidence distribution (1-5) ---
       const allConfidence = rows
         .map((r) => Number(r[COL.confidence]))
         .filter((n) => !isNaN(n));
       const overallAvgConfidence =
         allConfidence.length > 0
           ? Math.round(
-            (allConfidence.reduce((a, b) => a + b, 0) / allConfidence.length) * 100
-          ) / 100
+              (allConfidence.reduce((a, b) => a + b, 0) / allConfidence.length) * 100
+            ) / 100
           : 0;
 
       const distMap = new Map<number, number>();
@@ -233,13 +235,63 @@ export function useFormStats() {
         count: distMap.get(score) ?? 0,
       }));
 
-      // --- Override / modification (RQ2) ---
-      const overallOverrideRate = rateOf(rows, COL.override, "Yes").rate;
-      const overrideRateByTask = rateByGroup(rows, COL.task, COL.override, "Yes");
-      const overallModificationRate = rateOf(rows, COL.modified, "Yes").rate;
-      const modificationRateByTool = rateByGroup(rows, COL.tool, COL.modified, "Yes");
+      // Calibration shift: pre-scan expectation vs final choice
+      const calibrationRows = rows.filter(
+        (r) => r[COL.preScanExpectation] && r[COL.chosenOutput]
+      );
+      const calibrationShift = rateOf(
+        calibrationRows,
+        (r) => r[COL.preScanExpectation] !== r[COL.chosenOutput]
+      );
+      const calibrationShiftRate = calibrationShift.rate;
+      const calibrationShiftByExperience = rateByGroup(
+        calibrationRows,
+        COL.experience,
+        (r) => r[COL.preScanExpectation] !== r[COL.chosenOutput]
+      );
 
-      // --- Responses over time ---
+      // Tool agreement + weighting
+      const toolAgreementCounts = countBy(rows, COL.toolAgreement);
+      const weightedToolCounts = countBy(rows, COL.weightedTool);
+
+      const disagreedRows = rows.filter((r) =>
+        (r[COL.toolAgreement] ?? "").toLowerCase().startsWith("no")
+      );
+      const ownJudgmentRateWhenDisagreed = rateOf(
+        disagreedRows,
+        (r) => (r[COL.weightedTool] ?? "").toLowerCase().includes("own judgment")
+      ).rate;
+
+      // Time on task
+      const timeOnTaskDistribution = countBy(rows, COL.timeOnTask);
+
+      const timeGroups = new Map<string, number[]>();
+      for (const row of rows) {
+        const bucket = row[COL.timeOnTask];
+        const conf = Number(row[COL.confidence]);
+        if (!bucket || isNaN(conf)) continue;
+        if (!timeGroups.has(bucket)) timeGroups.set(bucket, []);
+        timeGroups.get(bucket)!.push(conf);
+      }
+      const avgConfidenceByTimeOnTask = Array.from(timeGroups.entries())
+        .map(([bucket, scores]) => ({
+          bucket,
+          avgConfidence:
+            Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100,
+          responses: scores.length,
+        }))
+        .sort((a, b) => b.avgConfidence - a.avgConfidence);
+
+      const overallModificationRate = rateOf(
+        rows,
+        (r) => r[COL.modified] === "Yes"
+      ).rate;
+      const modificationRateByChosenOutput = rateByGroup(
+        rows,
+        COL.chosenOutput,
+        (r) => r[COL.modified] === "Yes"
+      );
+
       const dateCounts = new Map<string, number>();
       let latestDate: Date | null = null;
 
@@ -258,19 +310,20 @@ export function useFormStats() {
       const spanDays =
         byDate.length > 0
           ? Math.max(
-            1,
-            Math.round(
-              (new Date(byDate[byDate.length - 1].date).getTime() -
-                new Date(byDate[0].date).getTime()) /
-              (1000 * 60 * 60 * 24)
-            ) + 1
-          )
+              1,
+              Math.round(
+                (new Date(byDate[byDate.length - 1].date).getTime() -
+                  new Date(byDate[0].date).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              ) + 1
+            )
           : 1;
 
       setStats({
         totalResponses: total,
-        countsByTool,
-        avgConfidenceByTool,
+        countsByChosenOutput,
+        avgConfidenceByChosenOutput,
+        countsByToolsCompared,
         countsByExperience,
         countsByLanguage,
         countsByTask,
@@ -278,10 +331,15 @@ export function useFormStats() {
         countsByMainReason,
         overallAvgConfidence,
         confidenceDistribution,
-        overallOverrideRate,
-        overrideRateByTask,
+        calibrationShiftRate,
+        calibrationShiftByExperience,
+        toolAgreementCounts,
+        weightedToolCounts,
+        ownJudgmentRateWhenDisagreed,
+        timeOnTaskDistribution,
+        avgConfidenceByTimeOnTask,
         overallModificationRate,
-        modificationRateByTool,
+        modificationRateByChosenOutput,
         byDate,
         responseRatePerDay: Math.round((total / spanDays) * 10) / 10,
         lastResponseAt: latestDate ? latestDate.toLocaleString() : null,

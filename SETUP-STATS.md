@@ -33,7 +33,7 @@ Open `src/hooks/useFormStats.ts`:
 
 ```ts
 const SHEET_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQkDjn4O4oamE14JaVYRi9keo0wO7VTkvgOihsOuGwQZI8Dm4CCnnyR4E3PmEC3ww4pBUBA6MmjefpR/pub?output=csv";
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vROUfyZdgaKVYhRdTNajvfyml5naikzVkiWfGRwMO33eDiXvVWtECA99k3g-BeRj4H8qacx56q5FMxP/pub?output=csv";
 
 const CHOSEN_LLM_COLUMN =
   "Which LLM output did you choose? (Claude / GPT-4 / Gemini)";

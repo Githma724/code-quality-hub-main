@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { SampleResult, Finding } from "@/hooks/usePipeline";
-import { AlertTriangle, CheckCircle2, FileCode2, Pencil, Check } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileCode2, Pencil, Check, Loader2 } from "lucide-react";
 
 interface CodeByLabel {
   label: string;
@@ -11,7 +11,9 @@ interface CodeByLabel {
 }
 
 interface Props {
-  results: Record<string, SampleResult>;
+  semgrepResults: Record<string, SampleResult>;
+  sonarResults: Record<string, SampleResult>;
+  isSonarRunning: boolean;
   samples: CodeByLabel[];
   chosenLabel: string | null;
   onChoose: (label: string) => void;
@@ -30,10 +32,11 @@ const severityLineBg: Record<string, string> = {
   INFO: "bg-muted/50 border-l-2 border-muted-foreground",
 };
 
-export function ResultsDashboard({ results, samples, chosenLabel, onChoose, onCodeChange }: Props) {
-  const entries = Object.entries(results);
+export function ResultsDashboard({
+  semgrepResults, sonarResults, isSonarRunning, samples, chosenLabel, onChoose, onCodeChange,
+}: Props) {
+  const labels = Object.keys(semgrepResults);
 
-  // label -> current code (starts as original, mutated as devs edit)
   const [codeByLabel, setCodeByLabel] = useState<Record<string, string>>(() =>
     Object.fromEntries(samples.map((s) => [s.label, s.code])),
   );
@@ -48,18 +51,23 @@ export function ResultsDashboard({ results, samples, chosenLabel, onChoose, onCo
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">Scan Results</h2>
       <div className="grid gap-4 md:grid-cols-2">
-        {entries.map(([label, r]) => {
+        {labels.map((label) => {
           const code = codeByLabel[label] ?? "";
           const isEditing = editingLabel === label;
+          const sg = semgrepResults[label];
+          const sc = sonarResults[label];
+          const sonarPending = !sc && isSonarRunning;
 
-          // group findings by 1-indexed line number
-          const findingsByLine = new Map<number, Finding[]>();
-          for (const f of r.findings) {
-            if (f.line == null) continue;
+          // line -> findings from BOTH tools, tagged, for the inline code view
+          const findingsByLine = new Map<number, (Finding & { tool: "semgrep" | "sonarcloud" })[]>();
+          const tag = (f: Finding, tool: "semgrep" | "sonarcloud") => {
+            if (f.line == null) return;
             const arr = findingsByLine.get(f.line) ?? [];
-            arr.push(f);
+            arr.push({ ...f, tool });
             findingsByLine.set(f.line, arr);
-          }
+          };
+          sg?.findings.forEach((f) => tag(f, "semgrep"));
+          sc?.findings.forEach((f) => tag(f, "sonarcloud"));
 
           const originalCode = samples.find((s) => s.label === label)?.code ?? "";
           const wasEdited = code !== originalCode;
@@ -87,12 +95,8 @@ export function ResultsDashboard({ results, samples, chosenLabel, onChoose, onCo
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-4 gap-2 text-center text-sm">
-                  <Metric label="Findings" value={r.totalFindings} />
-                  <Metric label="Errors" value={r.error} tone="destructive" />
-                  <Metric label="Warnings" value={r.warning} tone="warning" />
-                  <Metric label="LOC" value={r.linesOfCode} />
-                </div>
+                <ToolMetricRow toolLabel="Semgrep" result={sg} />
+                <ToolMetricRow toolLabel="SonarCloud" result={sc} pending={sonarPending} />
 
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-muted-foreground">Code</p>
@@ -102,15 +106,7 @@ export function ResultsDashboard({ results, samples, chosenLabel, onChoose, onCo
                     className="h-6 gap-1 px-2 text-xs"
                     onClick={() => setEditingLabel(isEditing ? null : label)}
                   >
-                    {isEditing ? (
-                      <>
-                        <Check className="h-3 w-3" /> Done
-                      </>
-                    ) : (
-                      <>
-                        <Pencil className="h-3 w-3" /> Edit
-                      </>
-                    )}
+                    {isEditing ? (<><Check className="h-3 w-3" /> Done</>) : (<><Pencil className="h-3 w-3" /> Edit</>)}
                   </Button>
                 </div>
 
@@ -134,14 +130,13 @@ export function ResultsDashboard({ results, samples, chosenLabel, onChoose, onCo
                           </div>
                           {lineFindings?.map((f, i) => (
                             <div key={i} className="ml-8 flex items-start gap-2 pb-1 pr-2">
-                              <span
-                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${severityColor[f.severity] ?? "bg-muted text-muted-foreground"}`}
-                              >
+                              <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${severityColor[f.severity] ?? "bg-muted text-muted-foreground"}`}>
                                 {f.severity}
                               </span>
-                              <span className="text-muted-foreground">
-                                {f.rule} — {f.message}
+                              <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground">
+                                {f.tool === "sonarcloud" ? "Sonar" : "Semgrep"}
                               </span>
+                              <span className="text-muted-foreground">{f.rule} — {f.message}</span>
                             </div>
                           ))}
                         </div>
@@ -150,9 +145,9 @@ export function ResultsDashboard({ results, samples, chosenLabel, onChoose, onCo
                   </div>
                 )}
 
-                {r.findings.length === 0 && (
+                {(sg?.findings.length ?? 0) === 0 && (sc?.findings.length ?? 0) === 0 && !sonarPending && (
                   <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3" /> No issues found
+                    <CheckCircle2 className="h-3 w-3" /> No issues found by either tool
                   </p>
                 )}
 
@@ -173,30 +168,42 @@ export function ResultsDashboard({ results, samples, chosenLabel, onChoose, onCo
   );
 }
 
-function Metric({
-  label,
-  value,
-  tone,
+function ToolMetricRow({
+  toolLabel, result, pending,
 }: {
-  label: string;
-  value: number;
-  tone?: "destructive" | "warning";
+  toolLabel: string;
+  result?: SampleResult;
+  pending?: boolean;
 }) {
   return (
     <div className="rounded-md border border-border p-2">
-      <div
-        className={
-          tone === "destructive"
-            ? "text-lg font-bold text-destructive"
-            : tone === "warning"
-              ? "text-lg font-bold text-amber-500"
-              : "text-lg font-bold text-foreground"
-        }
-      >
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{toolLabel}</p>
+      {pending ? (
+        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Waiting for results…
+        </div>
+      ) : result ? (
+        <div className="grid grid-cols-4 gap-2 text-center text-sm">
+          <Metric label="Findings" value={result.totalFindings} />
+          <Metric label="Errors" value={result.error} tone="destructive" />
+          <Metric label="Warnings" value={result.warning} tone="warning" />
+          <Metric label="LOC" value={result.linesOfCode} />
+        </div>
+      ) : (
+        <p className="py-1 text-xs text-muted-foreground">Not run</p>
+      )}
+    </div>
+  );
+}
+
+function Metric({ label, value, tone }: { label: string; value: number; tone?: "destructive" | "warning" }) {
+  return (
+    <div className="rounded-md border border-border p-1.5">
+      <div className={tone === "destructive" ? "text-base font-bold text-destructive" : tone === "warning" ? "text-base font-bold text-amber-500" : "text-base font-bold text-foreground"}>
         {value}
       </div>
-      <div className="flex items-center justify-center gap-1 text-[10px] uppercase text-muted-foreground">
-        {tone === "destructive" && <AlertTriangle className="h-3 w-3" />}
+      <div className="flex items-center justify-center gap-1 text-[9px] uppercase text-muted-foreground">
+        {tone === "destructive" && <AlertTriangle className="h-2.5 w-2.5" />}
         {label}
       </div>
     </div>
