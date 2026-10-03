@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { parseCsv } from "@/lib/csv";
 
 const SHEET_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vROUfyZdgaKVYhRdTNajvfyml5naikzVkiWfGRwMO33eDiXvVWtECA99k3g-BeRj4H8qacx56q5FMxP/pub?output=csv";
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4_ZJv2V6CmNtkOPOuk6dMBpQfgSC7UUg-0Y_cUEYVUyPO6dQqLkvkN-vznFj9Dfn4A-lU8qFkn79h/pub?output=csv";
 
 // Column names must match the redesigned form's exact question text
 // (Google Forms uses the question text as the linked Sheet's header row).
