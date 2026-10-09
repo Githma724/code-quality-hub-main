@@ -4,7 +4,7 @@ import { CodeInputPanel, type CodeSample } from "@/components/CodeInputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { DecisionFormLink } from "@/components/DecisionFormLink";
 import { TaskPromptPanel } from "@/components/TaskPromptPanel";
-import type { StudyTask } from "@/data/studyTasks";
+import { LANGUAGE_LABEL, STUDY_TASKS, type StudyLanguage } from "@/data/studyTasks";
 import { usePipeline } from "@/hooks/usePipeline";
 import { BarChart3, GitCompareArrows } from "lucide-react";
 
@@ -14,12 +14,14 @@ export default function Index() {
     { id: crypto.randomUUID(), label: "Gemini", code: "", language: "javascript" },
     { id: crypto.randomUUID(), label: "Claude", code: "", language: "javascript" },
   ]);
-  const [task, setTask] = useState<StudyTask | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [language, setLanguage] = useState<StudyLanguage | null>(null);
+  const task = STUDY_TASKS.find((t) => t.id === taskId) ?? null;
 
-  // Selecting a task sets every sample's language so files are scanned correctly.
-  const handleSelectTask = (t: StudyTask) => {
-    setTask(t);
-    setSamples((prev) => prev.map((s) => ({ ...s, language: t.language })));
+  // The chosen language is applied to every sample so files are scanned with the right extension.
+  const handleSelectLanguage = (l: StudyLanguage) => {
+    setLanguage(l);
+    setSamples((prev) => prev.map((s) => ({ ...s, language: l })));
   };
   const [chosenLabel, setChosenLabel] = useState<string | null>(null);
 
@@ -61,7 +63,12 @@ export default function Index() {
       </header>
 
       <main className="container mx-auto space-y-6 px-4 py-8">
-        <TaskPromptPanel selectedTaskId={task?.id ?? null} onSelectTask={handleSelectTask} />
+        <TaskPromptPanel
+          selectedTaskId={taskId}
+          language={language}
+          onSelectTask={setTaskId}
+          onSelectLanguage={handleSelectLanguage}
+        />
 
         <CodeInputPanel
           samples={samples}
@@ -98,6 +105,7 @@ export default function Index() {
             chosenLabel={chosenLabel}
             sessionId={dispatchId}
             taskLabel={task ? `${task.id} ${task.title}` : null}
+            languageLabel={language ? LANGUAGE_LABEL[language] : null}
           />
         )}
       </main>

@@ -2,35 +2,39 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, ClipboardCopy, ExternalLink, ListChecks } from "lucide-react";
-import { LANGUAGE_LABEL, LLM_LINKS, STUDY_TASKS, type StudyTask } from "@/data/studyTasks";
+import { LANGUAGE_LABEL, LLM_LINKS, STUDY_LANGUAGES, STUDY_TASKS, type StudyLanguage } from "@/data/studyTasks";
 
 interface Props {
   selectedTaskId: string | null;
-  onSelectTask: (task: StudyTask) => void;
+  language: StudyLanguage | null;
+  onSelectTask: (taskId: string) => void;
+  onSelectLanguage: (language: StudyLanguage) => void;
 }
 
 const STEPS = [
-  "Choose ONE task below.",
+  "Choose the programming language you are most comfortable with.",
+  "Choose ONE task.",
   "Click “Copy prompt”. Do not change the prompt in any way.",
   "Open ChatGPT, Gemini and Claude, each in a NEW chat, and paste the same prompt into each.",
   "Copy only the code from each answer and paste it into the matching box below (ChatGPT, Gemini, Claude).",
-  "Read the three outputs and decide which one you think is safest, remember the output as the form asks this.",
+  "Read the three outputs and decide which one you think is safest and remember it will be used later.",
   "Click “Run Analysis” and review the Semgrep and SonarCloud findings.",
-  "Choose the output you would actually use, then open the form and answer the questions.",
+  "Choose the output you would use, then open the form and answer the questions.",
 ];
 
-export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
+export function TaskPromptPanel({ selectedTaskId, language, onSelectTask, onSelectLanguage }: Props) {
   const [copied, setCopied] = useState(false);
   const task = STUDY_TASKS.find((t) => t.id === selectedTaskId) ?? null;
+  const prompt = task && language ? task.buildPrompt(language) : null;
 
   const copy = async () => {
-    if (!task) return;
+    if (!prompt) return;
     try {
-      await navigator.clipboard.writeText(task.prompt);
+      await navigator.clipboard.writeText(prompt);
     } catch {
       // Fallback for browsers that block the clipboard API
       const el = document.createElement("textarea");
-      el.value = task.prompt;
+      el.value = prompt;
       document.body.appendChild(el);
       el.select();
       document.execCommand("copy");
@@ -44,7 +48,7 @@ export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
     <Card className="border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <ListChecks className="h-4 w-4 text-primary" /> Study instructions
+          <ListChecks className="h-4 w-4 text-primary" />  Instructions
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -55,7 +59,25 @@ export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
         </ol>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-foreground">1. Choose your task</p>
+          <p className="mb-2 text-sm font-medium text-foreground">1. Choose your language</p>
+          <div className="flex flex-wrap gap-2">
+            {STUDY_LANGUAGES.map((l) => (
+              <Button
+                key={l}
+                type="button"
+                size="sm"
+                variant={l === language ? "default" : "outline"}
+                aria-pressed={l === language}
+                onClick={() => onSelectLanguage(l)}
+              >
+                {LANGUAGE_LABEL[l]}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-foreground">2. Choose your task</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {STUDY_TASKS.map((t) => {
               const active = t.id === selectedTaskId;
@@ -63,7 +85,7 @@ export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => onSelectTask(t)}
+                  onClick={() => onSelectTask(t.id)}
                   aria-pressed={active}
                   className={`rounded-md border px-3 py-2 text-left text-sm transition-colors ${
                     active
@@ -73,18 +95,21 @@ export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
                 >
                   <span className="block text-xs font-semibold">{t.id}</span>
                   <span className="block">{t.title}</span>
-                  <span className="block text-xs opacity-70">{LANGUAGE_LABEL[t.language]}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {task && (
+        {task && !language && (
+          <p className="text-sm text-muted-foreground">Choose a language above to see the prompt.</p>
+        )}
+
+        {task && language && prompt && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium text-foreground">
-                2. Copy this prompt — {task.id} {task.title} ({LANGUAGE_LABEL[task.language]})
+                3. Copy this prompt — {task.id} {task.title} ({LANGUAGE_LABEL[language]})
               </p>
               <Button size="sm" variant={copied ? "secondary" : "default"} onClick={copy}>
                 {copied ? <Check className="mr-1 h-4 w-4" /> : <ClipboardCopy className="mr-1 h-4 w-4" />}
@@ -92,11 +117,11 @@ export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
               </Button>
             </div>
             <pre className="whitespace-pre-wrap rounded-md border border-border bg-code p-3 font-mono text-sm text-code-foreground">
-              {task.prompt}
+              {prompt}
             </pre>
 
             <div>
-              <p className="mb-2 text-sm font-medium text-foreground">3. Paste it into each AI (new chat)</p>
+              <p className="mb-2 text-sm font-medium text-foreground">4. Paste it into each AI (new chat)</p>
               <div className="flex flex-wrap gap-2">
                 {LLM_LINKS.map((l) => (
                   <Button key={l.label} asChild size="sm" variant="outline">
@@ -108,7 +133,7 @@ export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 Paste only the code (no explanations) into the matching box below. The language has been set to{" "}
-                {LANGUAGE_LABEL[task.language]} for you.
+                {LANGUAGE_LABEL[language]} for you.
               </p>
             </div>
           </div>

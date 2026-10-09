@@ -10,9 +10,10 @@ interface Props {
   chosenLabel: string;
   sessionId: string | null;
   taskLabel: string | null;
+  languageLabel?: string | null;
 }
 
-export function DecisionFormLink({ chosenLabel, sessionId, taskLabel }: Props) {
+export function DecisionFormLink({ chosenLabel, sessionId, taskLabel, languageLabel }: Props) {
   const [copied, setCopied] = useState(false);
 
   const copyId = async () => {
@@ -35,6 +36,11 @@ export function DecisionFormLink({ chosenLabel, sessionId, taskLabel }: Props) {
           {taskLabel && (
             <p>
               <span className="font-medium text-foreground">Task:</span> {taskLabel}
+            </p>
+          )}
+          {languageLabel && (
+            <p>
+              <span className="font-medium text-foreground">Language:</span> {languageLabel}
             </p>
           )}
           {sessionId && (
