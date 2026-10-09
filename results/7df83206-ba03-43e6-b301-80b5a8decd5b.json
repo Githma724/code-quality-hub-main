@@ -1,0 +1,42 @@
+{
+  "ChatGPT": {
+    "linesOfCode": 123,
+    "critical": 0,
+    "error": 0,
+    "warning": 2,
+    "info": 0,
+    "totalFindings": 2,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Leftover print() statement \u2014 remove or replace with logging before production.",
+        "line": 116,
+        "rule": "github.workflows.semgrep.leftover-print-statement"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Leftover print() statement \u2014 remove or replace with logging before production.",
+        "line": 123,
+        "rule": "github.workflows.semgrep.leftover-print-statement"
+      }
+    ]
+  },
+  "Claude": {
+    "linesOfCode": 85,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  },
+  "Gemini": {
+    "linesOfCode": 69,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  }
+}
