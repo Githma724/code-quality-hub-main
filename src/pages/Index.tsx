@@ -3,18 +3,27 @@ import { Link } from "react-router-dom";
 import { CodeInputPanel, type CodeSample } from "@/components/CodeInputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { DecisionFormLink } from "@/components/DecisionFormLink";
+import { TaskPromptPanel } from "@/components/TaskPromptPanel";
+import type { StudyTask } from "@/data/studyTasks";
 import { usePipeline } from "@/hooks/usePipeline";
 import { BarChart3, GitCompareArrows } from "lucide-react";
 
 export default function Index() {
   const [samples, setSamples] = useState<CodeSample[]>([
-    { id: crypto.randomUUID(), label: "GPT-4", code: "", language: "javascript" },
-    { id: crypto.randomUUID(), label: "Claude", code: "", language: "javascript" },
+    { id: crypto.randomUUID(), label: "ChatGPT", code: "", language: "javascript" },
     { id: crypto.randomUUID(), label: "Gemini", code: "", language: "javascript" },
+    { id: crypto.randomUUID(), label: "Claude", code: "", language: "javascript" },
   ]);
+  const [task, setTask] = useState<StudyTask | null>(null);
+
+  // Selecting a task sets every sample's language so files are scanned correctly.
+  const handleSelectTask = (t: StudyTask) => {
+    setTask(t);
+    setSamples((prev) => prev.map((s) => ({ ...s, language: t.language })));
+  };
   const [chosenLabel, setChosenLabel] = useState<string | null>(null);
 
-  const { semgrep, sonar, runPipeline } = usePipeline();
+  const { dispatchId, semgrep, sonar, runPipeline } = usePipeline();
 
   const isAnalyzing = semgrep.status === "running";
   const isSonarRunning = sonar.status === "running";
@@ -52,6 +61,8 @@ export default function Index() {
       </header>
 
       <main className="container mx-auto space-y-6 px-4 py-8">
+        <TaskPromptPanel selectedTaskId={task?.id ?? null} onSelectTask={handleSelectTask} />
+
         <CodeInputPanel
           samples={samples}
           onSamplesChange={setSamples}
@@ -82,7 +93,13 @@ export default function Index() {
           />
         )}
 
-        {anyResults && chosenLabel && <DecisionFormLink chosenLabel={chosenLabel} />}
+        {anyResults && chosenLabel && (
+          <DecisionFormLink
+            chosenLabel={chosenLabel}
+            sessionId={dispatchId}
+            taskLabel={task ? `${task.id} ${task.title}` : null}
+          />
+        )}
       </main>
     </div>
   );
