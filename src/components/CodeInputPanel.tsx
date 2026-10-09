@@ -24,7 +24,7 @@ export function CodeInputPanel({ samples, onSamplesChange, onRunBoth, isAnalyzin
   const LANGUAGES = [
     { value: "python", label: "Python", ext: "py" },
     { value: "javascript", label: "JavaScript", ext: "js" },
-    { value: "typescript", label: "TypeScript", ext: "ts" },
+    // { value: "typescript", label: "TypeScript", ext: "ts" },
   ] as const;
 
   const addSample = () => {

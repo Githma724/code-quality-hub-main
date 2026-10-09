@@ -1,15 +1,15 @@
 // The five study tasks (T1–T5). Each prompt is a template: the developer picks a language
 // and the same wording is filled in for that language. Edit prompts here only.
 
-export type StudyLanguage = "python" | "javascript" | "typescript";
+export type StudyLanguage = "python" | "javascript" ;
 
 // Java is not offered: SonarCloud needs compiled classes to analyse Java, which pasted snippets don't have.
-export const STUDY_LANGUAGES: StudyLanguage[] = ["python", "javascript", "typescript"];
+export const STUDY_LANGUAGES: StudyLanguage[] = ["python", "javascript"];
 
 export const LANGUAGE_LABEL: Record<StudyLanguage, string> = {
   python: "Python",
   javascript: "JavaScript",
-  typescript: "TypeScript",
+  // typescript: "TypeScript",
 };
 
 interface LangInfo {
@@ -28,7 +28,7 @@ const toSnake = (s: string) => s.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase())
 const LANG: Record<StudyLanguage, LangInfo> = {
   python: { name: "Python", file: "Python", runtime: "Python", webFramework: "Flask", naming: toSnake, nullWord: "None", trueWord: "True", falseWord: "False" },
   javascript: { name: "JavaScript", file: "JavaScript", runtime: "Node.js", webFramework: "Express", naming: (s) => s, nullWord: "null", trueWord: "true", falseWord: "false" },
-  typescript: { name: "TypeScript", file: "TypeScript", runtime: "Node.js", webFramework: "Express", naming: (s) => s, nullWord: "null", trueWord: "true", falseWord: "false" },
+  // typescript: { name: "TypeScript", file: "TypeScript", runtime: "Node.js", webFramework: "Express", naming: (s) => s, nullWord: "null", trueWord: "true", falseWord: "false" },
 };
 
 export interface StudyTask {
