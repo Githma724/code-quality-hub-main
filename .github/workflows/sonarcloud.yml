@@ -79,8 +79,10 @@ jobs:
           else:
               raise SystemExit("Timed out waiting for SonarCloud analysis")
 
+          # Only OPEN issues: closed issues from earlier runs (whose files no longer
+          # exist) must not be attributed to this run's samples.
           issues = get(
-              f"{host}/api/issues/search?componentKeys={project_key}&ps=500"
+              f"{host}/api/issues/search?componentKeys={project_key}&resolved=false&ps=500"
           )['issues']
 
           sev_map = {
@@ -96,8 +98,10 @@ jobs:
 
           import pathlib
           out = {}
+          file_to_label = {}   # exact file name (with extension) -> sample label
           for f in sorted(pathlib.Path('submissions').iterdir()):
               name = f.stem
+              file_to_label[f.name] = name
               out[name] = {
                   'linesOfCode': sum(1 for _ in open(f)),
                   'critical': 0, 'error': 0, 'warning': 0, 'info': 0,
@@ -107,8 +111,11 @@ jobs:
           for issue in issues:
               component = issue['component']  # "<projectKey>:submissions/Name.ext"
               path = component.split(':', 1)[-1]
-              name = pathlib.Path(path).stem
-              if name not in out:
+              # Match the exact file submitted in THIS run (name + extension).
+              if not path.startswith('submissions/'):
+                  continue
+              name = file_to_label.get(pathlib.Path(path).name)
+              if name is None:
                   continue
               sev = issue.get('severity', 'INFO')
               key = sev_map.get(sev, 'info')
