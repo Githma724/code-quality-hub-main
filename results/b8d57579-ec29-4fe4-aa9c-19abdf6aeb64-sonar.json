@@ -1,0 +1,50 @@
+{
+  "ChatGPT": {
+    "linesOfCode": 77,
+    "critical": 0,
+    "error": 1,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "ERROR",
+        "message": "Make sure disabling CSRF protection is safe here.",
+        "line": 10,
+        "rule": "python:S4502"
+      }
+    ]
+  },
+  "Claude": {
+    "linesOfCode": 55,
+    "critical": 0,
+    "error": 1,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "ERROR",
+        "message": "Make sure disabling CSRF protection is safe here.",
+        "line": 7,
+        "rule": "python:S4502"
+      }
+    ]
+  },
+  "Gemini": {
+    "linesOfCode": 77,
+    "critical": 0,
+    "error": 1,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "ERROR",
+        "message": "Make sure disabling CSRF protection is safe here.",
+        "line": 10,
+        "rule": "python:S4502"
+      }
+    ]
+  }
+}
