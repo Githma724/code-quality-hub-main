@@ -1,0 +1,29 @@
+{
+  "ChatGPT": {
+    "linesOfCode": 77,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  },
+  "Claude": {
+    "linesOfCode": 55,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  },
+  "Gemini": {
+    "linesOfCode": 77,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  }
+}
