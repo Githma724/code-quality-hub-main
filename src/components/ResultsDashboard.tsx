@@ -60,8 +60,13 @@ export function ResultsDashboard({
 
           // line -> findings from BOTH tools, tagged, for the inline code view
           const findingsByLine = new Map<number, (Finding & { tool: "semgrep" | "sonarcloud" })[]>();
+          // Findings without a line number (file-level) are listed separately so none are hidden.
+          const fileLevel: (Finding & { tool: "semgrep" | "sonarcloud" })[] = [];
           const tag = (f: Finding, tool: "semgrep" | "sonarcloud") => {
-            if (f.line == null) return;
+            if (f.line == null) {
+              fileLevel.push({ ...f, tool });
+              return;
+            }
             const arr = findingsByLine.get(f.line) ?? [];
             arr.push({ ...f, tool });
             findingsByLine.set(f.line, arr);
@@ -97,6 +102,23 @@ export function ResultsDashboard({
               <CardContent className="space-y-3">
                 <ToolMetricRow toolLabel="Semgrep" result={sg} />
                 <ToolMetricRow toolLabel="SonarCloud" result={sc} pending={sonarPending} />
+
+                {fileLevel.length > 0 && (
+                  <div className="rounded-md border border-border p-2">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">File-level findings (no specific line)</p>
+                    {fileLevel.map((f, i) => (
+                      <div key={i} className="flex items-start gap-2 py-0.5 text-xs">
+                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${severityColor[f.severity] ?? "bg-muted text-muted-foreground"}`}>
+                          {f.severity}
+                        </span>
+                        <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground">
+                          {f.tool === "sonarcloud" ? "Sonar" : "Semgrep"}
+                        </span>
+                        <span className="text-muted-foreground">{f.rule} — {f.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-muted-foreground">Code</p>
