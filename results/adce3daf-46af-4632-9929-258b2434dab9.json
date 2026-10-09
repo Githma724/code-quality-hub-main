@@ -1,0 +1,56 @@
+{
+  "ChatGPT": {
+    "linesOfCode": 157,
+    "critical": 0,
+    "error": 0,
+    "warning": 1,
+    "info": 0,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Manual regex-based tag stripping detected \u2014 fragile against malformed/nested markup; prefer a vetted library (e.g. DOMPurify, bleach).",
+        "line": 11,
+        "rule": "github.workflows.semgrep.regex-based-html-sanitization"
+      }
+    ]
+  },
+  "Claude": {
+    "linesOfCode": 177,
+    "critical": 0,
+    "error": 0,
+    "warning": 1,
+    "info": 0,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Manual regex-based tag stripping detected \u2014 fragile against malformed/nested markup; prefer a vetted library (e.g. DOMPurify, bleach).",
+        "line": 30,
+        "rule": "github.workflows.semgrep.regex-based-html-sanitization"
+      }
+    ]
+  },
+  "Gemini": {
+    "linesOfCode": 79,
+    "critical": 0,
+    "error": 0,
+    "warning": 2,
+    "info": 0,
+    "totalFindings": 2,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Manual regex-based tag stripping detected \u2014 fragile against malformed/nested markup; prefer a vetted library (e.g. DOMPurify, bleach).",
+        "line": 9,
+        "rule": "github.workflows.semgrep.regex-based-html-sanitization"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Manual regex-based tag stripping detected \u2014 fragile against malformed/nested markup; prefer a vetted library (e.g. DOMPurify, bleach).",
+        "line": 21,
+        "rule": "github.workflows.semgrep.regex-based-html-sanitization"
+      }
+    ]
+  }
+}
