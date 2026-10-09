@@ -37,7 +37,7 @@ const MAX_POLLS = 72; // ~6 minutes ceiling before giving up
 
 const idleTool: ToolState = { status: "idle", results: null, error: null };
 
-export function usePipeline(token: string) {
+export function usePipeline() {
   const [dispatchId, setDispatchId] = useState<string | null>(null);
   const [semgrep, setSemgrep] = useState<ToolState>(idleTool);
   const [sonar, setSonar] = useState<ToolState>(idleTool);
@@ -61,13 +61,6 @@ export function usePipeline(token: string) {
       semgrepDone.current = false;
       sonarDone.current = false;
 
-      if (!token) {
-        const failed: ToolState = { status: "failed", results: null, error: "Paste your GitHub token above first." };
-        setSemgrep(failed);
-        setSonar(failed);
-        return;
-      }
-
       setSemgrep({ status: "running", results: null, error: null });
       setSonar({ status: "running", results: null, error: null });
 
@@ -81,8 +74,8 @@ export function usePipeline(token: string) {
       setDispatchId(id);
 
       const [semgrepDispatch, sonarDispatch] = await Promise.allSettled([
-        dispatchScan(token, snippets, { dispatchId: id, eventType: "code_quality_scan" }),
-        dispatchScan(token, snippets, { dispatchId: id, eventType: "code_quality_sonar_scan" }),
+        dispatchScan(snippets, { dispatchId: id, eventType: "code_quality_scan" }),
+        dispatchScan(snippets, { dispatchId: id, eventType: "code_quality_sonar_scan" }),
       ]);
 
       if (semgrepDispatch.status === "rejected") {
@@ -100,7 +93,7 @@ export function usePipeline(token: string) {
 
         if (!semgrepDone.current) {
           try {
-            const data = await fetchResultsIfReady(token, id, `results/${id}.json`);
+            const data = await fetchResultsIfReady(id, "semgrep");
             if (data) {
               setSemgrep({ status: "completed", results: data as Record<string, SampleResult>, error: null });
               semgrepDone.current = true;
@@ -113,7 +106,7 @@ export function usePipeline(token: string) {
 
         if (!sonarDone.current) {
           try {
-            const data = await fetchResultsIfReady(token, id, `results/${id}-sonar.json`);
+            const data = await fetchResultsIfReady(id, "sonar");
             if (data) {
               setSonar({ status: "completed", results: data as Record<string, SampleResult>, error: null });
               sonarDone.current = true;
@@ -140,7 +133,7 @@ export function usePipeline(token: string) {
         }
       }, POLL_INTERVAL_MS);
     },
-    [token, stopPolling],
+    [stopPolling],
   );
 
   return { dispatchId, semgrep, sonar, runPipeline };

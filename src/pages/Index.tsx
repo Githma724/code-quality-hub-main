@@ -3,12 +3,10 @@ import { Link } from "react-router-dom";
 import { CodeInputPanel, type CodeSample } from "@/components/CodeInputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { DecisionFormLink } from "@/components/DecisionFormLink";
-import { GithubTokenInput, getStoredToken } from "@/components/GithubTokenInput";
 import { usePipeline } from "@/hooks/usePipeline";
 import { BarChart3, GitCompareArrows } from "lucide-react";
 
 export default function Index() {
-  const [token, setToken] = useState(getStoredToken());
   const [samples, setSamples] = useState<CodeSample[]>([
     { id: crypto.randomUUID(), label: "GPT-4", code: "", language: "javascript" },
     { id: crypto.randomUUID(), label: "Claude", code: "", language: "javascript" },
@@ -16,7 +14,7 @@ export default function Index() {
   ]);
   const [chosenLabel, setChosenLabel] = useState<string | null>(null);
 
-  const { semgrep, sonar, runPipeline } = usePipeline(token);
+  const { semgrep, sonar, runPipeline } = usePipeline();
 
   const isAnalyzing = semgrep.status === "running";
   const isSonarRunning = sonar.status === "running";
@@ -54,8 +52,6 @@ export default function Index() {
       </header>
 
       <main className="container mx-auto space-y-6 px-4 py-8">
-        <GithubTokenInput token={token} onTokenChange={setToken} />
-
         <CodeInputPanel
           samples={samples}
           onSamplesChange={setSamples}
