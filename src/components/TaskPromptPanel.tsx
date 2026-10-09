@@ -10,13 +10,13 @@ interface Props {
 }
 
 const STEPS = [
-  "Choose ONE task below (your facilitator may assign one).",
+  "Choose ONE task below.",
   "Click “Copy prompt”. Do not change the prompt in any way.",
   "Open ChatGPT, Gemini and Claude, each in a NEW chat, and paste the same prompt into each.",
   "Copy only the code from each answer and paste it into the matching box below (ChatGPT, Gemini, Claude).",
-  "Read the three outputs and decide which one you think is safest — remember it; the form asks this.",
+  "Read the three outputs and decide which one you think is safest, remember the output as the form asks this.",
   "Click “Run Analysis” and review the Semgrep and SonarCloud findings.",
-  "Choose the output you would use, then open the form and answer the questions.",
+  "Choose the output you would actually use, then open the form and answer the questions.",
 ];
 
 export function TaskPromptPanel({ selectedTaskId, onSelectTask }: Props) {
