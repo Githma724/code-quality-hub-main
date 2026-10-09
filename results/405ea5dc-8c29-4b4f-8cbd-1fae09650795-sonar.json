@@ -1,0 +1,98 @@
+{
+  "ChatGPT": {
+    "linesOfCode": 103,
+    "critical": 0,
+    "error": 0,
+    "warning": 3,
+    "info": 3,
+    "totalFindings": 6,
+    "findings": [
+      {
+        "severity": "INFO",
+        "message": "Prefer `node:crypto` over `crypto`.",
+        "line": 5,
+        "rule": "javascript:S7772"
+      },
+      {
+        "severity": "INFO",
+        "message": "Prefer `node:util` over `util`.",
+        "line": 6,
+        "rule": "javascript:S7772"
+      },
+      {
+        "severity": "INFO",
+        "message": "Prefer `node:path` over `path`.",
+        "line": 7,
+        "rule": "javascript:S7772"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Either use this collection's contents or remove the collection.",
+        "line": 11,
+        "rule": "javascript:S4030"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator.",
+        "line": 28,
+        "rule": "javascript:S9383"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Promise executor functions should not be async.",
+        "line": 55,
+        "rule": "javascript:S6544"
+      }
+    ]
+  },
+  "Claude": {
+    "linesOfCode": 64,
+    "critical": 0,
+    "error": 0,
+    "warning": 2,
+    "info": 1,
+    "totalFindings": 3,
+    "findings": [
+      {
+        "severity": "INFO",
+        "message": "Prefer `node:crypto` over `crypto`.",
+        "line": 3,
+        "rule": "javascript:S7772"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Either use this collection's contents or remove the collection.",
+        "line": 11,
+        "rule": "javascript:S4030"
+      },
+      {
+        "severity": "WARNING",
+        "message": "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking.",
+        "line": null,
+        "rule": "javascript:S8786"
+      }
+    ]
+  },
+  "Gemini": {
+    "linesOfCode": 106,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 2,
+    "totalFindings": 2,
+    "findings": [
+      {
+        "severity": "INFO",
+        "message": "Prefer `node:crypto` over `crypto`.",
+        "line": 2,
+        "rule": "javascript:S7772"
+      },
+      {
+        "severity": "INFO",
+        "message": "Prefer `node:path` over `path`.",
+        "line": 3,
+        "rule": "javascript:S7772"
+      }
+    ]
+  }
+}
