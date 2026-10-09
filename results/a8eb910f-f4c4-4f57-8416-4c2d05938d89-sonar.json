@@ -1,0 +1,61 @@
+{
+  "ChatGPT": {
+    "linesOfCode": 134,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  },
+  "Claude": {
+    "linesOfCode": 125,
+    "critical": 0,
+    "error": 4,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 4,
+    "findings": [
+      {
+        "severity": "ERROR",
+        "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+        "line": 70,
+        "rule": "python:S1186"
+      },
+      {
+        "severity": "ERROR",
+        "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+        "line": 73,
+        "rule": "python:S1186"
+      },
+      {
+        "severity": "ERROR",
+        "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+        "line": 76,
+        "rule": "python:S1186"
+      },
+      {
+        "severity": "ERROR",
+        "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+        "line": 79,
+        "rule": "python:S1186"
+      }
+    ]
+  },
+  "Gemini": {
+    "linesOfCode": 70,
+    "critical": 0,
+    "error": 0,
+    "warning": 1,
+    "info": 0,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "WARNING",
+        "message": "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking.",
+        "line": 22,
+        "rule": "python:S8786"
+      }
+    ]
+  }
+}
