@@ -31,12 +31,13 @@ import {
 } from "lucide-react";
 
 const COLORS = [
+  "#8b5cf6",
   "hsl(var(--primary))",
   "#3b82f6",
   "#f59e0b",
   "#10b981",
   "#ef4444",
-  "#8b5cf6",
+
 ];
 
 
@@ -191,7 +192,7 @@ export function FormStatsDashboard() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-  
+
         <Button size="sm" variant="outline" onClick={refresh} disabled={loading}>
           <RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh
@@ -270,7 +271,7 @@ export function FormStatsDashboard() {
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Table2 className="h-4 w-4" /> Descriptive statistics (N = {N})
                 </CardTitle>
-              
+
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -297,8 +298,51 @@ export function FormStatsDashboard() {
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-foreground">2. Who took part</h3>
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <FrequencyBlock title="Years of experience" rows={experience} />
-                  <FrequencyBlock title="Primary language" rows={language} />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Developer experience</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={experience}
+                              dataKey="count"
+                              nameKey="label"
+                              outerRadius={80}
+                              label={(p: any) => `${p.label} (${p.pct}%)`}
+                            >
+                              {experience.map((_, i) => (
+                                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Primary programming language</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={language} margin={{ top: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]}>
+                              <LabelList dataKey="count" position="top" style={labelStyle} />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
                   <FrequencyBlock title="Coding task reviewed" rows={tasks} />
                   <FrequencyBlock
                     title="Used AI coding assistants before"
@@ -312,19 +356,108 @@ export function FormStatsDashboard() {
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-foreground">3. What developers did</h3>
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <FrequencyBlock title="Output chosen" rows={chosen} />
-                  <FrequencyBlock title="Did Semgrep and SonarCloud agree?" rows={agreement} />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Selections by chosen output</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chosen} margin={{ top: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                            <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Bar dataKey="count" fill={COLORS[COLORS.length - 1]} radius={[4, 4, 0, 0]}>
+                              <LabelList
+                                dataKey="count"
+                                position="top"
+                                style={labelStyle}
+                                formatter={(v: number) => `${v} (${N ? Math.round((v / N) * 100) : 0}%)`}
+                              />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Semgrep vs SonarCloud agreement</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={agreement}
+                              dataKey="count"
+                              nameKey="label"
+                              outerRadius={80}
+                              label={(p: any) => `${p.label}: ${p.count} (${p.pct}%)`}
+                            >
+                              {agreement.map((_, i) => (
+                                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
                   <FrequencyBlock
                     title="Tool weighted more (only when tools disagreed)"
                     rows={weighted}
                     note="% of the sessions where the tools disagreed."
                   />
-                  <FrequencyBlock title="Time spent reviewing" rows={reviewTime} />
-                  <FrequencyBlock
-                    title="Main reason for selection"
-                    rows={reasons}
-                    note="% of all responses; if more than one reason could be ticked, totals can exceed 100%."
-                  />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Timer className="h-4 w-4" /> Time spent reviewing
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={reviewTime} margin={{ top: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                              <LabelList dataKey="count" position="top" style={labelStyle} />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Main reason(s) for selection</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={reasons} layout="vertical" margin={{ left: 24, right: 72 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <YAxis dataKey="label" type="category" width={180} tick={{ fontSize: 11 }} />
+                            <Tooltip />
+                            <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]}>
+                              <LabelList
+                                dataKey="count"
+                                position="right"
+                                style={labelStyle}
+                                formatter={(v: number) => `${v} (${N ? Math.round((v / N) * 100) : 0}%)`}
+                              />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
                   <div className="grid content-start gap-3 sm:grid-cols-2">
                     <StatTile
                       label="Chose the output they expected"
@@ -352,133 +485,28 @@ export function FormStatsDashboard() {
             </CardContent>
           </Card>
 
-          {/* Core oversight/calibration metrics */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Calibration shift rate</CardTitle>
-                <Split className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">{stats.calibrationShiftRate}%</div>
-                <p className="text-xs text-muted-foreground">
-                  % of responses where the final choice differed from the developer's pre-scan expectation.
-                  A low rate means first impressions mostly held after seeing the scan results.
-                </p>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Own-judgment rate on disagreement
-                </CardTitle>
-                <ShieldQuestion className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">{stats.ownJudgmentRateWhenDisagreed}%</div>
-                <p className="text-xs text-muted-foreground">
-                  Of sessions where Semgrep and SonarCloud disagreed, % where the developer trusted neither tool
-                  and used their own judgment instead
-                </p>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Code modification rate</CardTitle>
-                <PenLine className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">{stats.overallModificationRate}%</div>
-                <p className="text-xs text-muted-foreground">
-                  % of responses where the developer edited the code before accepting it
-                </p>
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Chosen output: bar + pie */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Selections by chosen output</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chosen} margin={{ top: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
-                        <LabelList
-                          dataKey="count"
-                          position="top"
-                          style={labelStyle}
-                          formatter={(v: number) => `${v} (${N ? Math.round((v / N) * 100) : 0}%)`}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Share of selections</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chosen}
-                        dataKey="count"
-                        nameKey="label"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        label={(p: any) => `${p.pct}%`}
-                      >
-                        {chosen.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: number, n: string, p: any) => [`${v} (${p.payload.pct}%)`, n]} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Tool agreement + weighted tool breakdown */}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Semgrep vs SonarCloud agreement</CardTitle>
+                <CardTitle className="text-base">Coding tasks reviewed</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
+                <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={agreement}
-                        dataKey="count"
-                        nameKey="label"
-                        outerRadius={80}
-                        label={(p: any) => `${p.label}: ${p.count} (${p.pct}%)`}
-                      >
-                        {agreement.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
+                    <BarChart data={tasks} margin={{ top: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={50} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                       <Tooltip />
-                    </PieChart>
+                      <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="count" position="top" style={labelStyle} />
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
@@ -513,32 +541,6 @@ export function FormStatsDashboard() {
 
           {/* Calibration by experience + modification by chosen output */}
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Calibration shift rate by experience</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={stats.calibrationShiftByExperience.map((d: { group: string; rate: number }) => ({
-                        group: d.group,
-                        rate: d.rate,
-                      }))}
-                      margin={{ top: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="group" tick={{ fontSize: 11 }} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" />
-                      <Tooltip />
-                      <Bar dataKey="rate" fill="#8b5cf6" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="rate" position="top" style={labelStyle} formatter={(v: number) => `${v}%`} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
 
             <Card>
               <CardHeader>
@@ -566,65 +568,10 @@ export function FormStatsDashboard() {
                 </div>
               </CardContent>
             </Card>
+
           </div>
 
-          {/* Time on task */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Timer className="h-4 w-4" /> Time spent reviewing
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={reviewTime} margin={{ top: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="count" position="top" style={labelStyle} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Avg confidence by time spent</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={stats.avgConfidenceByTimeOnTask.map((d: { bucket: string; avgConfidence: number }) => ({
-                        bucket: d.bucket,
-                        avgConfidence: d.avgConfidence,
-                      }))}
-                      margin={{ top: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-                      <YAxis domain={[0, 5]} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="avgConfidence" fill="#10b981" radius={[4, 4, 0, 0]}>
-                        <LabelList
-                          dataKey="avgConfidence"
-                          position="top"
-                          style={labelStyle}
-                          formatter={(v: number) => Number(v).toFixed(2)}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Confidence analysis */}
           <div className="grid gap-4 lg:grid-cols-2">
@@ -677,128 +624,9 @@ export function FormStatsDashboard() {
           </div>
 
           {/* Main reason for selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Main reason(s) for selection</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={reasons} layout="vertical" margin={{ left: 24, right: 72 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <YAxis dataKey="label" type="category" width={180} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]}>
-                      <LabelList
-                        dataKey="count"
-                        position="right"
-                        style={labelStyle}
-                        formatter={(v: number) => `${v} (${N ? Math.round((v / N) * 100) : 0}%)`}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Demographics charts */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Coding tasks reviewed</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={tasks} margin={{ top: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={50} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="count" position="top" style={labelStyle} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Primary programming language</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={language} margin={{ top: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="count" position="top" style={labelStyle} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Developer experience</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={experience}
-                        dataKey="count"
-                        nameKey="label"
-                        outerRadius={80}
-                        label={(p: any) => `${p.label} (${p.pct}%)`}
-                      >
-                        {experience.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Prior AI assistant use</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={priorAi}
-                        dataKey="count"
-                        nameKey="label"
-                        outerRadius={80}
-                        label={(p: any) => `${p.label} (${p.pct}%)`}
-                      >
-                        {priorAi.map((_, i) => (
-                          <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Trend over time */}
           {stats.byDate.length > 1 && (
