@@ -1,0 +1,36 @@
+{
+  "ChatGPT": {
+    "linesOfCode": 109,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  },
+  "Claude": {
+    "linesOfCode": 139,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 1,
+    "totalFindings": 1,
+    "findings": [
+      {
+        "severity": "INFO",
+        "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+        "line": 8,
+        "rule": "python:S5332"
+      }
+    ]
+  },
+  "Gemini": {
+    "linesOfCode": 55,
+    "critical": 0,
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "totalFindings": 0,
+    "findings": []
+  }
+}
